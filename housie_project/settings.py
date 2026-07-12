@@ -102,18 +102,9 @@ AUTH_USER_MODEL = 'accounts.User'
 
 import dj_database_url
 
+database_url = os.environ.get('DATABASE_URL', 'postgresql://neondb_owner:npg_8Ih5qcsQVagm@ep-withered-lake-at5q8rjb-pooler.c-9.us-east-1.aws.neon.tech/neondb?sslmode=require')
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'neondb',
-        'USER': 'neondb_owner',
-        'PASSWORD': 'YOUR_NEON_PASSWORD', # Replace this with your actual password
-        'HOST': 'ep-withered-lake-at5q8rjb.c-9.us-east-1.aws.neon.tech',
-        'PORT': '5432',
-        'OPTIONS': {
-            'sslmode': 'require',
-        }
-    }
+    'default': dj_database_url.parse(database_url, conn_max_age=600)
 }
 
 
