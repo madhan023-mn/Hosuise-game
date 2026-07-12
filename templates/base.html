@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Housie (Tambola) Live Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .glass {
+            background: rgba(15, 23, 42, 0.6); /* Darker glass for game theme */
+            border-radius: 16px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 215, 0, 0.2); /* Subtle gold border */
+        }
+        body {
+            /* Casino / Game Night Theme */
+            background: radial-gradient(circle at center, #2e1065 0%, #0f172a 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="font-sans antialiased">
+    <nav class="glass m-2 md:m-4 p-3 md:p-4 flex flex-col md:flex-row justify-between items-center gap-3 md:gap-0">
+        <a href="{% if request.user.is_authenticated %}{% url 'home' %}{% else %}{% url 'public_join' %}{% endif %}">
+            <h1 class="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600 tracking-wide uppercase drop-shadow-sm">🎲 Tambola Live</h1>
+        </a>
+        <div>
+            {% if request.user.is_authenticated %}
+                <span class="mr-4">Welcome, {{ request.user.username }}</span>
+                <a href="{% url 'logout' %}" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded">Logout</a>
+            {% else %}
+                <a href="{% url 'login' %}" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">Operator Login</a>
+            {% endif %}
+        </div>
+    </nav>
+    
+    <main class="container mx-auto p-4 relative z-10">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Universal Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <script>
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let bgClass = 'bg-blue-600';
+            if(type === 'error') bgClass = 'bg-red-600';
+            if(type === 'success') bgClass = 'bg-green-600';
+            
+            toast.className = `transform transition-all duration-300 translate-x-full opacity-0 ${bgClass} text-white px-6 py-3 rounded-lg shadow-2xl font-bold flex items-center space-x-2 border border-white border-opacity-20`;
+            toast.innerHTML = `<span>${message}</span>`;
+            
+            container.appendChild(toast);
+            
+            // Animate in
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-x-full', 'opacity-0');
+            });
+            
+            // Remove after 3s
+            setTimeout(() => {
+                toast.classList.add('translate-x-full', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

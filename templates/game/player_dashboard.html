@@ -1,0 +1,250 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex flex-col md:flex-row justify-between items-center mb-4 px-2 md:px-8 gap-4 md:gap-0">
+    <h2 class="text-2xl md:text-3xl font-extrabold text-white drop-shadow-md tracking-wider text-center md:text-left">Housie Game: <span class="text-yellow-300">{{ game.game_code }}</span></h2>
+    <div class="flex flex-col sm:flex-row items-center gap-2 md:space-x-4">
+        <div class="bg-black bg-opacity-30 px-3 py-1 md:px-4 md:py-2 rounded-full text-white font-semibold text-sm md:text-base">
+            Status: <span id="game-status" class="{% if game.status == 'Running' %}text-green-400{% else %}text-yellow-400{% endif %}">{{ game.status }}</span>
+        </div>
+        <div class="flex items-center space-x-2">
+            <input type="text" id="voice-search" list="voices-list" placeholder="Search language (e.g. Telugu)..." class="bg-indigo-800 text-white p-2 w-48 md:w-64 rounded-lg outline-none border border-indigo-400 text-sm placeholder-indigo-300">
+            <datalist id="voices-list"></datalist>
+            <button id="sound-toggle" onclick="toggleSound()" class="bg-indigo-600 hover:bg-indigo-700 text-white p-2 md:p-3 text-sm md:text-base rounded-full shadow-lg transition whitespace-nowrap">
+                🔊 Sound On
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="glass p-4 md:p-10 max-w-6xl mx-auto flex flex-col-reverse md:flex-row gap-8 md:gap-12 items-center justify-between">
+    <!-- Left Side: Number Grid -->
+    <div class="w-full md:w-1/2">
+        <h3 class="text-xl font-bold mb-4 text-center border-b border-white border-opacity-20 pb-2">Number Board</h3>
+        <div class="grid grid-cols-10 gap-0.5 sm:gap-1 md:gap-2" id="number-grid">
+            {% for i in "x"|ljust:"90" %}
+            <div id="num-{{ forloop.counter }}" class="h-7 w-7 sm:h-8 sm:w-8 md:h-10 md:w-10 lg:h-12 lg:w-12 text-[10px] sm:text-xs md:text-sm lg:text-base rounded flex items-center justify-center font-bold transition-all duration-500 {% if forloop.counter in called_numbers %}bg-green-500 text-white shadow-[0_0_10px_rgba(34,197,94,0.6)] scale-110 border border-green-300{% else %}bg-gray-800 text-gray-400 bg-opacity-40 border border-gray-600{% endif %}">
+                {{ forloop.counter }}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Right Side: Big Number Display -->
+    <div class="w-full md:w-1/2 flex flex-col items-center justify-center space-y-8">
+        <h3 class="text-2xl font-bold text-gray-200 uppercase tracking-widest">Latest Call</h3>
+        <div class="relative group">
+            <div class="absolute -inset-1 bg-gradient-to-r from-pink-600 to-purple-600 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse"></div>
+            <div class="relative bg-white text-gray-900 rounded-full h-64 w-64 md:h-80 md:w-80 flex flex-col items-center justify-center shadow-2xl border-8 border-indigo-200">
+                <span id="current-number" class="text-9xl md:text-[10rem] font-black tracking-tighter" style="line-height: 1;">{{ last_number|default:"-" }}</span>
+            </div>
+        </div>
+        <div class="text-xl font-medium bg-black bg-opacity-40 px-6 py-3 rounded-2xl shadow-inner">
+            Total Called: <span id="total-called" class="font-bold text-yellow-300">{{ called_numbers|length }}</span> / 90
+        </div>
+    </div>
+</div>
+
+<!-- History Ribbon -->
+<div class="mt-8 px-4 w-full max-w-7xl mx-auto">
+    <h3 class="text-lg font-bold mb-2 text-gray-200 pl-4">Call History</h3>
+    <div class="glass p-4 overflow-x-auto flex items-center space-x-3 scrollbar-hide" id="history-container" style="scroll-behavior: smooth;">
+        {% for cn in game.called_numbers.all %}
+            <div class="flex items-center">
+                <div class="flex-shrink-0 h-14 w-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 border-2 border-white flex items-center justify-center shadow-lg font-bold text-xl">
+                    {{ cn.number }}
+                </div>
+                {% if not forloop.last %}
+                <div class="h-1 w-6 bg-white bg-opacity-50 mx-1"></div>
+                {% endif %}
+            </div>
+        {% empty %}
+            <p class="text-gray-300 italic" id="empty-history">No numbers called yet.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let soundEnabled = true;
+
+    function toggleSound() {
+        soundEnabled = !soundEnabled;
+        const btn = document.getElementById('sound-toggle');
+        if(soundEnabled) {
+            btn.innerHTML = '🔊 Sound On';
+            btn.classList.replace('bg-gray-600', 'bg-indigo-600');
+            btn.classList.replace('hover:bg-gray-700', 'hover:bg-indigo-700');
+        } else {
+            btn.innerHTML = '🔇 Sound Off';
+            btn.classList.replace('bg-indigo-600', 'bg-gray-600');
+            btn.classList.replace('hover:bg-indigo-700', 'hover:bg-gray-700');
+        }
+    }
+
+    // Hardcoded supported languages for Online TTS
+    const supportedLanguages = [
+        { code: 'en', name: 'English', prefix: 'Number' },
+        { code: 'te', name: 'Telugu (తెలుగు)', prefix: 'నెంబర్' },
+        { code: 'hi', name: 'Hindi (हिन्दी)', prefix: 'नंबर' },
+        { code: 'ta', name: 'Tamil (தமிழ்)', prefix: 'எண்' },
+        { code: 'kn', name: 'Kannada (ಕನ್ನಡ)', prefix: 'ಸಂಖ್ಯೆ' },
+        { code: 'ml', name: 'Malayalam (മലയാളം)', prefix: 'നമ്പർ' },
+        { code: 'mr', name: 'Marathi (मराठी)', prefix: 'क्रमांक' },
+        { code: 'gu', name: 'Gujarati (ગુજરાતી)', prefix: 'નંબર' },
+        { code: 'bn', name: 'Bengali (বাংলা)', prefix: 'নম্বর' },
+        { code: 'pa', name: 'Punjabi (ਪੰਜਾਬੀ)', prefix: 'ਨੰਬਰ' },
+        { code: 'ur', name: 'Urdu (اردو)', prefix: 'نمبر' },
+        { code: 'or', name: 'Odia (ଓଡ଼ିଆ)', prefix: 'ନମ୍ବର' },
+        { code: 'as', name: 'Assamese (অসমীয়া)', prefix: 'নম্বৰ' },
+        { code: 'ne', name: 'Nepali (नेपाली)', prefix: 'नम्बर' },
+        { code: 'si', name: 'Sinhala (සිංහල)', prefix: 'අංකය' },
+        { code: 'es', name: 'Spanish (Español)', prefix: 'Número' },
+        { code: 'fr', name: 'French (Français)', prefix: 'Numéro' },
+        { code: 'ar', name: 'Arabic (العربية)', prefix: 'رقم' }
+    ];
+    
+    function populateVoiceList() {
+        const datalist = document.getElementById('voices-list');
+        datalist.innerHTML = '';
+        
+        supportedLanguages.forEach(lang => {
+            const option = document.createElement('option');
+            option.value = lang.name;
+            datalist.appendChild(option);
+        });
+    }
+    
+    populateVoiceList();
+
+    let currentAudio = null;
+
+    function speak(number) {
+        if (!soundEnabled) return;
+        
+        if (currentAudio) {
+            currentAudio.pause();
+        }
+        
+        const searchValue = document.getElementById('voice-search').value;
+        let selectedLang = supportedLanguages[0]; // Default to English
+        
+        if (searchValue) {
+            const found = supportedLanguages.find(l => l.name === searchValue);
+            if (found) {
+                selectedLang = found;
+            }
+        }
+        
+        const text = selectedLang.prefix + " " + number;
+        
+        // Use Google Translate's unofficial TTS API for guaranteed online voices
+        const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${selectedLang.code}&client=tw-ob&q=${encodeURIComponent(text)}`;
+        
+        currentAudio = new Audio(url);
+        currentAudio.playbackRate = 1.0; // Original speed as requested
+        currentAudio.play().catch(e => console.error("Audio play failed:", e));
+    }
+
+    const gameCode = "{{ game.game_code }}";
+    const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+    const gameSocket = new WebSocket(
+        wsScheme + '://' + window.location.host + '/ws/game/' + gameCode + '/'
+    );
+
+    gameSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        const msg = data.message;
+        
+        if(msg.action === 'new_number') {
+            // Update big number
+            const currentNumEl = document.getElementById('current-number');
+            currentNumEl.textContent = msg.number;
+            
+            // Pop animation on big number
+            const container = currentNumEl.parentElement;
+            container.classList.remove('scale-110');
+            void container.offsetWidth; // trigger reflow
+            container.classList.add('scale-110', 'transition', 'duration-300');
+            setTimeout(() => container.classList.remove('scale-110'), 300);
+            
+            // Update grid
+            const gridItem = document.getElementById('num-' + msg.number);
+            if(gridItem) {
+                gridItem.className = "h-7 w-7 sm:h-8 sm:w-8 md:h-10 md:w-10 lg:h-12 lg:w-12 text-[10px] sm:text-xs md:text-sm lg:text-base rounded flex items-center justify-center font-bold transition-all duration-500 bg-green-500 text-white shadow-[0_0_10px_rgba(34,197,94,0.6)] scale-110 border border-green-300";
+            }
+            
+            // Text to speech
+            speak(msg.number);
+            
+            // Update Total
+            document.getElementById('total-called').textContent = msg.order;
+            
+            // Append to history linked list
+            const historyContainer = document.getElementById('history-container');
+            const emptyMsg = document.getElementById('empty-history');
+            if(emptyMsg) emptyMsg.remove();
+            
+            // If there's already items, add the line connector to the last one
+            if (historyContainer.children.length > 0) {
+                const connector = document.createElement('div');
+                connector.className = "h-1 w-6 bg-white bg-opacity-50 mx-1";
+                // Append connector to the last item's container if we were structuring it that way,
+                // But our structure is flat or flexed. Let's append just a wrapper.
+                const lastEl = historyContainer.lastElementChild;
+                lastEl.insertAdjacentHTML('beforeend', '<div class="h-1 w-6 bg-white bg-opacity-50 mx-1"></div>');
+            }
+            
+            const newItem = document.createElement('div');
+            newItem.className = "flex items-center animate-fade-in-right";
+            newItem.innerHTML = `
+                <div class="flex-shrink-0 h-14 w-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 border-2 border-white flex items-center justify-center shadow-lg font-bold text-xl transform hover:scale-110 transition">
+                    ${msg.number}
+                </div>
+            `;
+            historyContainer.appendChild(newItem);
+            
+            // Auto scroll to end
+            historyContainer.scrollLeft = historyContainer.scrollWidth;
+            
+        } else if(msg.action === 'status_change') {
+            const statusEl = document.getElementById('game-status');
+            statusEl.textContent = msg.status;
+            if(msg.status === 'Running') {
+                statusEl.className = "text-green-400 font-bold";
+            } else {
+                statusEl.className = "text-yellow-400 font-bold";
+            }
+        }
+    };
+
+    gameSocket.onclose = function(e) {
+        console.error('Game socket closed unexpectedly');
+    };
+    
+    // Auto scroll to end on load
+    window.onload = function() {
+        const hc = document.getElementById('history-container');
+        hc.scrollLeft = hc.scrollWidth;
+    }
+</script>
+
+<style>
+    @keyframes fadeInRight {
+        from { opacity: 0; transform: translateX(20px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+    .animate-fade-in-right {
+        animation: fadeInRight 0.5s ease-out forwards;
+    }
+    /* Hide scrollbar for history */
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+    }
+    .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+</style>
+{% endblock %}

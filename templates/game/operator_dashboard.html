@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="mb-4 px-2 md:px-4 flex flex-col md:flex-row justify-between items-center gap-4">
+    <a href="{% url 'home' %}" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded shadow transition text-sm md:text-base w-full md:w-auto text-center">
+        &larr; Back to Dashboard
+    </a>
+    <div class="flex flex-wrap justify-center gap-2">
+        <button onclick="changeStatus('Running')" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 text-sm md:text-base md:px-5 md:py-2 rounded-full font-bold shadow-lg transition transform hover:scale-105">▶ Start</button>
+        <button onclick="changeStatus('Paused')" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 text-sm md:text-base md:px-5 md:py-2 rounded-full font-bold shadow-lg transition transform hover:scale-105">⏸ Pause</button>
+        <button onclick="changeStatus('Finished')" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 text-sm md:text-base md:px-5 md:py-2 rounded-full font-bold shadow-lg transition transform hover:scale-105">⏹ End Game</button>
+    </div>
+</div>
+
+<div class="glass p-4 md:p-8 max-w-5xl mx-auto flex flex-col md:flex-row gap-6 md:gap-8">
+    <div class="w-full md:w-1/3 flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-white border-opacity-20 pb-8 md:pb-0 pr-0 md:pr-8 space-y-6">
+        <div class="text-lg bg-black bg-opacity-30 px-4 py-2 rounded-xl text-center w-full">
+            Status: <span id="game-status" class="font-bold text-white uppercase tracking-wider">{{ game.status }}</span>
+        </div>
+        <div class="w-full bg-indigo-900 bg-opacity-50 p-4 rounded-xl text-center border border-indigo-500 shadow-lg">
+            <p class="text-sm text-indigo-200 mb-2">Ask viewers to visit the home page and enter this Game ID:</p>
+            <div class="bg-black bg-opacity-60 text-yellow-300 font-mono text-3xl tracking-[0.3em] font-extrabold py-3 px-4 rounded-lg cursor-pointer hover:bg-opacity-80 transition flex items-center justify-center group" onclick="navigator.clipboard.writeText('{{ game.game_code }}'); showToast('Game ID copied to clipboard!', 'success');" title="Click to Copy">
+                <span>{{ game.game_code }}</span>
+                <svg class="w-5 h-5 ml-2 opacity-50 group-hover:opacity-100 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+            </div>
+        </div>
+        
+        <button onclick="callNextNumber()" id="call-btn" class="relative group w-full">
+            <div class="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-200"></div>
+            <div class="relative bg-gradient-to-br from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white text-2xl font-black py-8 px-4 rounded-2xl shadow-2xl transform transition hover:scale-105 flex flex-col items-center">
+                <span>CALL NEXT</span>
+                <span class="text-sm font-normal mt-1 opacity-80 uppercase tracking-widest">Number</span>
+            </div>
+        </button>
+        
+        <div class="bg-white bg-opacity-10 w-full rounded-xl p-4 text-center">
+            <p class="text-gray-300 text-sm uppercase tracking-widest mb-1">Latest Call</p>
+            <p id="current-number" class="text-6xl font-black text-white drop-shadow-md">{{ last_number|default:"-" }}</p>
+        </div>
+        
+        <div class="text-lg">
+            Total Called: <span id="total-called" class="font-bold text-yellow-300">{{ called_numbers|length }}</span> / 90
+        </div>
+    </div>
+    
+    <!-- Grid -->
+    <div class="w-full md:w-2/3 flex justify-center">
+        <div class="grid grid-cols-10 gap-0.5 sm:gap-1 md:gap-2 opacity-90" id="number-grid">
+            {% for i in "x"|ljust:"90" %}
+            <div id="num-{{ forloop.counter }}" class="h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10 text-[9px] sm:text-xs md:text-sm rounded flex items-center justify-center font-bold transition-all {% if forloop.counter in called_numbers %}bg-green-500 text-white shadow-lg scale-110{% else %}bg-gray-800 text-gray-500 bg-opacity-40{% endif %}">
+                {{ forloop.counter }}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- History Ribbon -->
+<div class="mt-8 px-4 w-full max-w-5xl mx-auto">
+    <h3 class="text-lg font-bold mb-2 text-gray-200">Call History</h3>
+    <div class="glass p-4 overflow-x-auto flex items-center space-x-2 scrollbar-hide" id="history-container" style="scroll-behavior: smooth;">
+        {% for cn in game.called_numbers.all %}
+            <div class="flex items-center">
+                <div class="flex-shrink-0 h-10 w-10 md:h-12 md:w-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 border border-white flex items-center justify-center shadow font-bold text-lg">
+                    {{ cn.number }}
+                </div>
+                {% if not forloop.last %}
+                <div class="h-0.5 w-4 bg-white bg-opacity-50 mx-1"></div>
+                {% endif %}
+            </div>
+        {% empty %}
+            <p class="text-gray-300 italic" id="empty-history">No numbers called yet.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function changeStatus(status) {
+        fetch("{% url 'change_game_status' game.game_code %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: 'status=' + status
+        }).then(response => response.json())
+          .then(data => {
+              if(data.success) {
+                  document.getElementById('game-status').textContent = data.status;
+                  showToast('Game status changed to ' + data.status, 'success');
+              } else {
+                  showToast(data.error, 'error');
+              }
+          });
+    }
+
+    function callNextNumber() {
+        const btn = document.getElementById('call-btn');
+        btn.classList.add('opacity-50', 'pointer-events-none');
+        
+        fetch("{% url 'call_next_number' game.game_code %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        }).then(response => response.json())
+          .then(data => {
+              btn.classList.remove('opacity-50', 'pointer-events-none');
+              if(data.success) {
+                  // Update UI is mostly handled by Websockets, but since operator initiated:
+                  // The broadcast will hit if operator is connected to WS. 
+                  // Let's connect operator to WS as well for perfect sync.
+              } else {
+                  showToast(data.error, 'error');
+              }
+          });
+    }
+
+    // Connect Operator to WebSocket as well for synchronized updates (especially history appending)
+    const gameCode = "{{ game.game_code }}";
+    const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+    const gameSocket = new WebSocket(
+        wsScheme + '://' + window.location.host + '/ws/game/' + gameCode + '/'
+    );
+
+    gameSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        const msg = data.message;
+        
+        if(msg.action === 'new_number') {
+            document.getElementById('current-number').textContent = msg.number;
+            document.getElementById('total-called').textContent = msg.order;
+            
+            const gridItem = document.getElementById('num-' + msg.number);
+            if(gridItem) {
+                gridItem.className = "h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10 text-[9px] sm:text-xs md:text-sm rounded flex items-center justify-center font-bold transition-all bg-green-500 text-white shadow-lg scale-110";
+            }
+            
+            // Append to history
+            const historyContainer = document.getElementById('history-container');
+            const emptyMsg = document.getElementById('empty-history');
+            if(emptyMsg) emptyMsg.remove();
+            
+            if (historyContainer.children.length > 0) {
+                const lastEl = historyContainer.lastElementChild;
+                lastEl.insertAdjacentHTML('beforeend', '<div class="h-0.5 w-4 bg-white bg-opacity-50 mx-1"></div>');
+            }
+            
+            const newItem = document.createElement('div');
+            newItem.className = "flex items-center animate-fade-in-right";
+            newItem.innerHTML = `
+                <div class="flex-shrink-0 h-10 w-10 md:h-12 md:w-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 border border-white flex items-center justify-center shadow font-bold text-lg">
+                    ${msg.number}
+                </div>
+            `;
+            historyContainer.appendChild(newItem);
+            historyContainer.scrollLeft = historyContainer.scrollWidth;
+            
+        } else if(msg.action === 'status_change') {
+            document.getElementById('game-status').textContent = msg.status;
+        }
+    };
+    
+    window.onload = function() {
+        const hc = document.getElementById('history-container');
+        hc.scrollLeft = hc.scrollWidth;
+    }
+</script>
+<style>
+    @keyframes fadeInRight {
+        from { opacity: 0; transform: translateX(20px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+    .animate-fade-in-right {
+        animation: fadeInRight 0.3s ease-out forwards;
+    }
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+    }
+    .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+</style>
+{% endblock %}
