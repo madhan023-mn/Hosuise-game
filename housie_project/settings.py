@@ -21,6 +21,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 import os
 
+# Load environment variables from .env file if it exists
+env_file = BASE_DIR / '.env'
+if env_file.exists():
+    with open(env_file) as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#'):
+                key, val = line.split('=', 1)
+                os.environ[key] = val
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-$l3q$p*8@@yd$j&w2une@m36nz9kgy_i$_t%#-f&!10!a=h6ap')
 
