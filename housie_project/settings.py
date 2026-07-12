@@ -37,8 +37,11 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-$l3q$p*8@@yd$j&w2une@
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['*'] # Allow Railway domains
-CSRF_TRUSTED_ORIGINS = ['https://*.up.railway.app']
+ALLOWED_HOSTS = ['*']
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.up.railway.app',
+    'https://*.vercel.app',
+]
 
 
 # Application definition
